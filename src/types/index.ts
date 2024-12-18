@@ -37,27 +37,32 @@ export interface Product {
 
 // Интерфейс каталога
 export interface ICatalog {
-  fetchProducts(): Promise<Product[]>;
+  setProducts(products: Product[]): void;
   getProducts(): Product[];
 }
 
-// Типы данных заказа
-export interface OrderItem {
+// Типы данных для корзины
+export interface CartItem {
   productId: string;
   quantity: number;
 }
 
+// Типы данных для заказа
 export interface OrderData {
-  items: OrderItem[];
   paymentMethod: string;
   deliveryAddress: string;
 }
 
-// Интерфейс для управления заказом
-export interface IOrder {
-  addItem(productId: string): void;
+// Интерфейс корзины
+export interface ICart {
+  addItem(product: CartItem): void;
   removeItem(productId: string): void;
-  getItems(): OrderItem[];
+  calculateTotal(): number;
+  getItems(): CartItem[];
+}
+
+// Интерфейс заказа
+export interface IOrder {
   setPaymentMethod(method: string): void;
   setDeliveryAddress(address: string): void;
   validateOrder(): string[];
@@ -65,11 +70,10 @@ export interface IOrder {
 
 // Интерфейс для класса CatalogView
 export interface ICatalogView {
-  catalog: Product[]; // Массив товаров для отображения
   container: HTMLElement; // Контейнер для рендера
 
-  renderCatalog(): void; // Метод для рендера каталога
-  bindCardEvents(): void; // Метод для привязки событий
+  renderCatalog(cards: HTMLElement[]): void; // Метод для рендера каталога, принимает массив HTML-элементов карточек
+  bindCardEvents(cards: HTMLElement[]): void; // Метод для привязки событий, принимает массив HTML-элементов карточек
 }
 
 // Интерфейс для класса ProductDetailView
@@ -81,34 +85,38 @@ export interface IProductDetailView {
   bindEvents(onBuy: () => void, onRemove: () => void): void; // Привязка событий
 }
 
-// Интерфейс для класса OrderFormView
-export interface IOrderFormView {
-  container: HTMLElement; // Контейнер для формы
-  currentStep: number; // Текущий шаг оформления заказа
-  formData: {
-    [key: string]: string | number;
-  };
- // Данные формы
+// Интерфейс для класса PaymentFormView
+export interface IPaymentFormView {
+  container: HTMLElement; // Контейнер для формы выбора оплаты
+  paymentMethod: string; // Выбранный способ оплаты
+  deliveryAddress: string; // Введённый адрес доставки
 
-  renderStep(stepIndex: number): void; // Рендер шага
-  validateStep(stepIndex: number): boolean; // Валидация текущего шага
-  bindEvents(onSubmit: () => void): void; // Привязка событий
-  clearForm(): void; // Очистка формы
+  render(): void; // Рендер формы
+  validate(): boolean; // Проверка заполненности полей
+  getData(): { paymentMethod: string; deliveryAddress: string }; // Получение данных формы
+  bindEvents(onNext: () => void): void; // Привязка событий для перехода на следующий шаг
 }
 
-// Интерфейс для шага формы заказа
-export interface OrderFormStep {
-  id: string; // Уникальный идентификатор шага
-  fields: FormField[]; // Поля шага
+// Интерфейс для класса ContactFormView
+export interface IContactFormView {
+  container: HTMLElement; // Контейнер для формы контактных данных
+  email: string; // Введённый email
+  phone: string; // Введённый номер телефона
+
+  render(): void; // Рендер формы
+  validate(): boolean; // Проверка заполненности полей
+  getData(): { email: string; phone: string }; // Получение данных формы
+  bindEvents(onSubmit: () => void): void; // Привязка событий для завершения оформления заказа
 }
 
-// Интерфейс для поля формы
+// Интерфейс для общего поля формы
 export interface FormField {
   name: string; // Название поля
   type: 'text' | 'email' | 'tel'; // Тип поля
   label: string; // Подпись к полю
   required: boolean; // Обязательно ли к заполнению
 }
+
 
 // Интерфейс для класса ProductCard
 export interface IProductCard {
@@ -140,16 +148,7 @@ export interface CartItem {
 
 // Интерфейс для класса CartView
 export interface ICartView {
-  cartItems: CartItem[]; // Список товаров в корзине
-  totalPrice: number; // Общая сумма товаров
-  modal: IModal; // Экземпляр модального окна
-
-  addItem(item: CartItem): void; // Добавление товара в корзину
-  removeItem(itemId: number): void; // Удаление товара из корзины
-  calculateTotal(): number; // Подсчёт общей суммы
-  renderCartItems(): HTMLElement; // Создание разметки корзины
-  openCart(): void; // Открытие корзины в модальном окне
-  closeCart(): void; // Закрытие корзины
-  bindEvents(): void; // Привязка обработчиков событий
+  renderCart(items: HTMLElement[]): void; // Рендер списка товаров в корзине
+  bindItemEvents(items: HTMLElement[]): void; // Привязка обработчиков событий к товарам
 }
 

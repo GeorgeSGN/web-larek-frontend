@@ -32,7 +32,6 @@ export interface Product {
   description: string;
   price: number;
   image: string;
-  stock: number;
 }
 
 // Интерфейс каталога
@@ -49,23 +48,27 @@ export interface CartItem {
 
 // Типы данных для заказа
 export interface OrderData {
-  paymentMethod: string;
-  deliveryAddress: string;
+  paymentMethod: string; // Способ оплаты
+  deliveryAddress: string; // Адрес доставки
+  phone: string; // Номер телефона
+  email: string; // Адрес электронной почты
 }
 
 // Интерфейс корзины
 export interface ICart {
-  addItem(product: CartItem): void;
-  removeItem(productId: string): void;
-  calculateTotal(): number;
-  getItems(): CartItem[];
+  addItem(product: CartItem): void; // Добавление товара в корзину
+  removeItem(productId: string): void; // Удаление товара из корзины
+  calculateTotal(): number; // Подсчёт общей стоимости товаров
+  getItems(): CartItem[]; // Получение списка товаров в корзине
 }
 
 // Интерфейс заказа
 export interface IOrder {
-  setPaymentMethod(method: string): void;
-  setDeliveryAddress(address: string): void;
-  validateOrder(): string[];
+  setPaymentMethod(method: string): void; // Установка способа оплаты
+  setDeliveryAddress(address: string): void; // Установка адреса доставки
+  setPhone(phone: string): void; // Установка номера телефона
+  setEmail(email: string): void; // Установка email
+  validateOrder(): string[]; // Проверка корректности данных заказа
 }
 
 // Интерфейс для класса CatalogView
@@ -78,18 +81,18 @@ export interface ICatalogView {
 
 // Интерфейс для класса ProductDetailView
 export interface IProductDetailView {
-  product: Product; // Товар для отображения
   container: HTMLElement; // Контейнер для отображения разметки
 
-  render(): HTMLElement; // Метод для создания разметки
+  render(): HTMLElement; // Метод для создания и возврата разметки карточки товара
   bindEvents(onBuy: () => void, onRemove: () => void): void; // Привязка событий
 }
+
 
 // Интерфейс для класса PaymentFormView
 export interface IPaymentFormView {
   container: HTMLElement; // Контейнер для формы выбора оплаты
-  paymentMethod: string; // Выбранный способ оплаты
-  deliveryAddress: string; // Введённый адрес доставки
+  paymentMethod: HTMLElement; // Выбранный способ оплаты
+  deliveryAddress: HTMLInputElement; // Введённый адрес доставки
 
   render(): void; // Рендер формы
   validate(): boolean; // Проверка заполненности полей
@@ -100,8 +103,8 @@ export interface IPaymentFormView {
 // Интерфейс для класса ContactFormView
 export interface IContactFormView {
   container: HTMLElement; // Контейнер для формы контактных данных
-  email: string; // Введённый email
-  phone: string; // Введённый номер телефона
+  email: HTMLInputElement; // Поле для ввода email
+  phone: HTMLInputElement; // Поле для ввода номера телефона
 
   render(): void; // Рендер формы
   validate(): boolean; // Проверка заполненности полей

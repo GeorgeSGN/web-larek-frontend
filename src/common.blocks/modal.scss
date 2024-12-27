@@ -15,6 +15,7 @@
 
   &_active {
     display: flex;
+    pointer-events: auto;
   }
 
   &__container {

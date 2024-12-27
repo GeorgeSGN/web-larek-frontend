@@ -1,37 +1,11 @@
-// Типы для API. Очень рассчитываю на ревью :) 
-export type ApiPostMethods = 'POST' | 'PUT' | 'DELETE';
-
-export interface IApi {
-  get(uri: string): Promise<object>;
-  post(uri: string, data: object, method?: ApiPostMethods): Promise<object>;
-  handleResponse(response: Response): Promise<object>;
-}
-
-// Типы событий и подписчиков
-export type EventName = string | RegExp;
-export type Subscriber = (event: object) => void;
-
-export interface EmitterEvent {
-  name: string;
-  data?: object;
-}
-
-export interface IEventEmitter {
-  on<T extends object>(eventName: EventName, callback: (event: T) => void): void;
-  off(eventName: EventName, callback: Subscriber): void;
-  emit<T extends object>(eventName: string, data?: T): void;
-  onAll(callback: (event: EmitterEvent) => void): void;
-  offAll(): void;
-  trigger<T extends object>(eventName: string, context?: Partial<T>): (event: T) => void;
-}
-
 // Тип для данных продукта
 export interface Product {
   id: string;
-  name: string;
   description: string;
-  price: number;
   image: string;
+  title: string;
+  category: string;
+  price: number | null;
 }
 
 // Интерфейс каталога
@@ -43,7 +17,9 @@ export interface ICatalog {
 // Типы данных для корзины
 export interface CartItem {
   productId: string;
-  quantity: number;
+  price: number;
+  title: string;
+  category: string;
 }
 
 // Типы данных для заказа
@@ -76,14 +52,14 @@ export interface ICatalogView {
   container: HTMLElement; // Контейнер для рендера
 
   renderCatalog(cards: HTMLElement[]): void; // Метод для рендера каталога, принимает массив HTML-элементов карточек
-  bindCardEvents(cards: HTMLElement[]): void; // Метод для привязки событий, принимает массив HTML-элементов карточек
+  bindCardEvents(cards: HTMLElement[], eventHandler: (event: Event) => void): void; // Метод для привязки событий, принимает массив HTML-элементов карточек и обработчик событий
 }
 
 // Интерфейс для класса ProductDetailView
 export interface IProductDetailView {
   container: HTMLElement; // Контейнер для отображения разметки
 
-  render(): HTMLElement; // Метод для создания и возврата разметки карточки товара
+  render(product: { title: string; price: number; description: string; category: string; image: string }): HTMLElement; // Метод для создания и возврата разметки карточки товара
   bindEvents(onBuy: () => void, onRemove: () => void): void; // Привязка событий
 }
 
@@ -91,14 +67,14 @@ export interface IProductDetailView {
 // Интерфейс для класса PaymentFormView
 export interface IPaymentFormView {
   container: HTMLElement; // Контейнер для формы выбора оплаты
-  paymentMethod: HTMLElement; // Выбранный способ оплаты
+  paymentMethod: string | null; // Выбранный способ оплаты (строка)
   deliveryAddress: HTMLInputElement; // Введённый адрес доставки
 
   render(): void; // Рендер формы
-  validate(): boolean; // Проверка заполненности полей
   getData(): { paymentMethod: string; deliveryAddress: string }; // Получение данных формы
   bindEvents(onNext: () => void): void; // Привязка событий для перехода на следующий шаг
 }
+
 
 // Интерфейс для класса ContactFormView
 export interface IContactFormView {
@@ -107,7 +83,6 @@ export interface IContactFormView {
   phone: HTMLInputElement; // Поле для ввода номера телефона
 
   render(): void; // Рендер формы
-  validate(): boolean; // Проверка заполненности полей
   getData(): { email: string; phone: string }; // Получение данных формы
   bindEvents(onSubmit: () => void): void; // Привязка событий для завершения оформления заказа
 }
@@ -124,9 +99,9 @@ export interface FormField {
 // Интерфейс для класса ProductCard
 export interface IProductCard {
   name: string; // Название товара
-  imageUrl: string; // URL изображения
+  image: string; // URL изображения
   price: number; // Цена товара
-  tag: string; // Раздел товара
+  category: string; // Раздел товара
 
   render(): HTMLElement; // Создание DOM-элемента карточки
   bindEvents(): void; // Привязка событий
@@ -142,16 +117,15 @@ export interface IModal {
   _content: string | HTMLElement; // Контент модального окна
 }
 
-// Интерфейс для товара в корзине
-export interface CartItem {
-  id: number; // Уникальный идентификатор товара
-  name: string; // Название товара
-  price: number; // Цена товара
-}
-
 // Интерфейс для класса CartView
 export interface ICartView {
   renderCart(items: HTMLElement[]): void; // Рендер списка товаров в корзине
   bindItemEvents(items: HTMLElement[]): void; // Привязка обработчиков событий к товарам
 }
 
+export interface ProductItem {
+  image: string;
+  title: string;
+  category: string;
+  price: number | null;
+}

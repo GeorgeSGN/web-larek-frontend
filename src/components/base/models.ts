@@ -145,26 +145,58 @@ export class Order implements IOrder {
     this.isSecondStep = isSecondStep;
   }
 
-  /** Проверяет корректность данных заказа
+  /**
+   * Получает способ оплаты.
+   * @returns строка, представляющая способ оплаты
+   */
+  getPaymentMethod(): string {
+    return this.paymentMethod;
+  }
+
+  /**
+   * Получает адрес доставки.
+   * @returns строка, представляющая адрес доставки
+   */
+  getDeliveryAddress(): string {
+    return this.deliveryAddress;
+  }
+
+  /**
+   * Получает номер телефона.
+   * @returns строка, представляющая номер телефона
+   */
+  getPhone(): string {
+    return this.phone;
+  }
+
+  /**
+   * Получает адрес электронной почты.
+   * @returns строка, представляющая email
+   */
+  getEmail(): string {
+    return this.email;
+  }
+
+  /**
+   * Проверяет корректность данных заказа.
    * @returns массив строк с ошибками или пустой массив, если всё корректно
    */
   validateOrder(): string[] {
     const errors: string[] = [];
 
-    if (!this.paymentMethod) errors.push('Способ оплаты не указан.');
-    if (!this.deliveryAddress) errors.push('Адрес доставки не указан.');
+    if (!this.paymentMethod) errors.push('Укажите способ оплаты.');
+    if (!this.deliveryAddress) errors.push('Укажите адрес доставки.');
 
     // Валидация для второго шага
     if (this.isSecondStep) {
       if (!this.phone || !/^\+?[0-9\s-]{7,15}$/.test(this.phone)) {
-        errors.push('Некорректный номер телефона.');
+        errors.push('Введите корректный номер телефона (например, +71234567890).');
       }
       if (!this.email || !/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(this.email)) {
-        errors.push('Некорректный email.');
+        errors.push('Введите корректный адрес электронной почты (например, test@test.ru).');
       }
     }
 
     return errors;
   }
 }
-

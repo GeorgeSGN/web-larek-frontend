@@ -19,7 +19,7 @@
 
 // // Создаем экземпляры каталога и представления каталога
 // const catalog = new Catalog();
-// const catalogContainer = ensureElement<HTMLElement>('.gallery'); 
+// const catalogContainer = ensureElement<HTMLElement>('.gallery');
 // if (!catalogContainer) {
 //   throw new Error('Gallery container element not found in DOM');
 // }
@@ -34,7 +34,7 @@
 // }
 // const modal = new Modal(modalContent);
 
-// const productDetailView = new ProductDetailView(modalContent!);
+// const productDetailView = new ProductDetailView(modalContent);
 
 // // Создаем экземпляры корзины и её представления
 // const cart = new Cart();
@@ -102,29 +102,23 @@
 //   paymentFormView.bindEvents(() => {
 //     // Получаем данные из PaymentFormView
 //     const data = paymentFormView.getData();
-//     console.log('Полученные данные из PaymentFormView:', data);
 
 //     // Устанавливаем адрес доставки
 //     order.setDeliveryAddress(data.deliveryAddress);
-//     console.log('Адрес доставки, сохранённый в Order:', order);
 
 //     const errors = order.validateOrder();
 //     if (errors.length === 0) {
 //       order.setIsSecondStep(true); // Устанавливаем флаг для второго шага
 //       openContactForm(); // Переходим на второй шаг
 //     } else {
-//       console.error('Validation errors:', errors);
 //       alert(`Ошибки: ${errors.join('\n')}`); // Выводим ошибки валидации
 //     }
 //   });
 
 //   eventEmitter.on<{ method: string }>('order:paymentMethodSelected', ({ method }) => {
 //     order.setPaymentMethod(method);
-//     console.log('Выбранный способ оплаты:', method);
 //   });
 // }
-
-
 
 // // Функция для открытия формы второго шага
 // function openContactForm() {
@@ -140,13 +134,11 @@
 //     if (errors.length === 0) {
 //       showOrderSuccess(); // Отображаем подтверждение заказа
 //     } else {
-//       console.error('Validation errors:', errors);
 //       alert(`Ошибки: ${errors.join('\n')}`); // Выводим ошибки валидации
 //     }
 //   });
 // }
 
-// // Функция для отображения экрана подтверждения заказа
 // function showOrderSuccess() {
 //   const successTemplate = document.getElementById('success') as HTMLTemplateElement;
 //   if (!successTemplate) {
@@ -155,7 +147,16 @@
 
 //   const clone = successTemplate.content.cloneNode(true) as HTMLElement;
 //   modalContent.innerHTML = ''; // Очищаем контент модального окна
-//   modalContent.appendChild(clone); // Отображаем экран успеха
+//   modalContent.appendChild(clone);
+
+//   // Сохраняем итоговую сумму перед очисткой корзины
+//   const totalAmount = cart.calculateTotal();
+
+//   // Обновляем текст с итоговой суммой
+//   const totalAmountElement = modalContent.querySelector('.order-success__description');
+//   if (totalAmountElement) {
+//     totalAmountElement.textContent = `Списано ${totalAmount.toLocaleString()} синапсов`;
+//   }
 
 //   // Очищаем корзину после оформления заказа
 //   cart.clearCart();
@@ -200,8 +201,21 @@
 
 //     catalogView.bindCardEvents(cards, handleCardClick); // Привязываем события
 //   } catch (error) {
-//     console.error('Error loading catalog:', error);
+//     alert('Ошибка при загрузке каталога');
 //   }
+// }
+
+// // Функция для получения CSS-класса категории
+// function getCategoryClass(category: string): string {
+//   const categoryMapping: Record<string, string> = {
+//     'софт-скил': 'soft',
+//     'хард-скил': 'hard',
+//     'дополнительное': 'additional',
+//     'кнопка': 'button',
+//     'другое': 'other',
+//   };
+
+//   return categoryMapping[category.toLowerCase()] || category.toLowerCase();
 // }
 
 // function createProductCard(item: Product) {
@@ -212,30 +226,17 @@
 //     item.category
 //   );
 
-//   // Создаём DOM-элемент карточки
 //   const cardElement = productCard.render();
-
-//   // Устанавливаем data-product-id
 //   setElementData(cardElement, { productId: item.id });
 
-//   // Применяем класс категории
 //   const categorySpan = cardElement.querySelector('.card__category') as HTMLElement;
 //   if (categorySpan) {
-//     // Преобразуем название категории к английскому формату.
-//     const categoryMapping: Record<string, string> = {
-//       'софт-скил': 'soft',
-//       'хард-скил': 'hard',
-//       'дополнительное': 'additional',
-//       'кнопка': 'button',
-//       'другое': 'other',
-//     };
-
-//     const categoryClass = categoryMapping[item.category.toLowerCase()] || item.category.toLowerCase();
-//     categorySpan.className = `card__category card__category_${categoryClass}`; // Заменяем класс
+//     categorySpan.className = `card__category card__category_${getCategoryClass(item.category)}`;
 //   }
 
 //   return cardElement;
 // }
+
 
 // // Обработчик кликов на карточках товаров
 // function handleCardClick(event: Event) {
@@ -262,6 +263,12 @@
 //     category: product.category,
 //     image: `${CDN_URL}/${product.image}`,
 //   });
+
+//   // Логика для установки цвета категории
+//   const categorySpan = renderedElement.querySelector('.card__category') as HTMLElement;
+//   if (categorySpan) {
+//     categorySpan.className = `card__category card__category_${getCategoryClass(product.category)}`; // Назначаем класс
+//   }
 
 //   const button = modalContent.querySelector('.card__button') as HTMLButtonElement;
 //   if (!button) {

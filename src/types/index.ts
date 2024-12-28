@@ -117,12 +117,6 @@ export interface IModal {
   _content: string | HTMLElement; // Контент модального окна
 }
 
-// Интерфейс для класса CartView
-export interface ICartView {
-  renderCart(items: HTMLElement[]): void; // Рендер списка товаров в корзине
-  bindItemEvents(items: HTMLElement[]): void; // Привязка обработчиков событий к товарам
-}
-
 export interface ProductItem {
   image: string;
   title: string;

@@ -24,6 +24,7 @@ export class PaymentFormView implements IPaymentFormView {
     this.container.innerHTML = '';
     this.container.appendChild(clone);
 
+    // Находим поле адреса
     this.deliveryAddress = this.container.querySelector('.form__input') as HTMLInputElement;
 
     // Подключаем обработчики
@@ -36,6 +37,9 @@ export class PaymentFormView implements IPaymentFormView {
     this.updateNextButtonState(); // Проверяем состояние кнопки при первом рендере
   }
 
+   /**
+   * Привязываем события «Онлайн» / «При получении», чтобы знать выбранный метод.
+   */
   setupPaymentMethodListeners(): void {
     const buttons = this.container.querySelectorAll('.button_alt') as NodeListOf<HTMLButtonElement>;
 
@@ -50,15 +54,18 @@ export class PaymentFormView implements IPaymentFormView {
         // Устанавливаем выбранный метод оплаты
         this.paymentMethod = button.getAttribute('name') || '';
 
-        // Обновляем состояние кнопки
-        this.updateNextButtonState();
-
         // Эмитируем событие с выбранным методом оплаты
         this.eventEmitter.emit('order:paymentMethodSelected', { method: this.paymentMethod });
+
+        // Обновляем состояние кнопки
+        this.updateNextButtonState();
       });
     });
   }
 
+  /**
+   * Активируем/блокируем кнопку "Далее" в зависимости от выбранного метода и адреса.
+   */
   updateNextButtonState(): void {
     const nextButton = this.container.querySelector('.order__button') as HTMLButtonElement;
 
@@ -79,13 +86,14 @@ export class PaymentFormView implements IPaymentFormView {
   }
 
   bindEvents(onNext: () => void): void {
-    const nextButton = this.container.querySelector('.order__button') as HTMLButtonElement;
-    if (nextButton) {
-      nextButton.addEventListener('click', () => {
-        if (this.paymentMethod && this.deliveryAddress?.value.trim()) {
-          onNext();
-        }
-      });
-    }
+    const form = this.container.querySelector('form');
+    if (!form) return;
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault(); // 
+      if (this.paymentMethod && this.deliveryAddress?.value.trim()) {
+        onNext(); //
+      }
+    });
   }
 }

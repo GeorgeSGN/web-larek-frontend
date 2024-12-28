@@ -69,19 +69,27 @@ export class ContactFormView implements IContactFormView {
    * @param onSubmit - функция, вызываемая при нажатии на кнопку "Оплатить".
    */
   bindEvents(onSubmit: () => void): void {
-    const submitButton = this.container.querySelector('.button') as HTMLButtonElement;
+    const form = this.container.querySelector('form');
+    if (!form) return; 
 
     // Обновляем состояние кнопки при каждом вводе данных
     this.email?.addEventListener('input', () => this.updateSubmitButtonState());
     this.phone?.addEventListener('input', () => this.updateSubmitButtonState());
 
-    // Обработчик для кнопки "Оплатить"
-    if (submitButton) {
-      submitButton.addEventListener('click', () => {
-        if (!submitButton.disabled) {
-          onSubmit();
-        }
-      });
-    }
+    form.addEventListener('submit', (event) => {
+      event.preventDefault(); 
+      
+      const isEmailValid =
+      this.email &&
+      /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(this.email.value);
+      const isPhoneValid =
+        this.phone &&
+        /^\+?[0-9\s-]{7,15}$/.test(this.phone.value);
+
+      if (isEmailValid && isPhoneValid) {
+        // Вызываем ваш колбэк
+        onSubmit();
+      }
+    })
   }
 }

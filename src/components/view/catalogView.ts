@@ -1,4 +1,3 @@
-// /components/catalogView.ts
 import { ICatalogView } from '../../types/index';
 
 export class CatalogView implements ICatalogView {

@@ -1,5 +1,5 @@
 import { EventEmitter } from '../base/events';
-import { CartItem } from '../../types';
+import { ICartItem } from '../../types';
 
 /**Cart
  * Класс CartItemView отвечает за отрисовку одного элемента списка корзины.
@@ -7,11 +7,11 @@ import { CartItem } from '../../types';
  * и инициирует кнопку удаления через EventEmitter.
  */
 export class CartItemView {
-  private item: CartItem;
+  private item: ICartItem;
   private element: HTMLElement;
   private eventEmitter: EventEmitter;
 
-  constructor(item: CartItem, eventEmitter: EventEmitter) {
+  constructor(item: ICartItem, eventEmitter: EventEmitter) {
     this.item = item;
     this.eventEmitter = eventEmitter;
 

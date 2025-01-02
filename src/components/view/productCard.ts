@@ -1,15 +1,19 @@
 import { Product } from '../../types';
 import { setElementData } from '../../utils/utils';
+import { EventEmitter } from '../base/events';
 import { CDN_URL } from '../../utils/constants';
+
 
 export class ProductCard {
   private product: Product;
   private element: HTMLElement;
+  private eventEmitter: EventEmitter;
 
-  constructor(product: Product) {
+  constructor(product: Product, eventEmitter: EventEmitter) {
     this.product = product;
+    this.eventEmitter = eventEmitter;
 
-    // 1. Находим #card-catalog (шаблон?)
+    // 1. Находим #card-catalog
     const template = document.getElementById('card-catalog') as HTMLTemplateElement;
     if (!template) {
       throw new Error('Template with ID "card-catalog" not found');
@@ -18,13 +22,10 @@ export class ProductCard {
     // 2. Клонируем
     const clone = template.content.cloneNode(true) as HTMLElement;
 
-    // 3. Находим корневой элемент ('.gallery__item' или '.card' — зависит от шаблона)
+    // 3. Находим корневой элемент
     const cardElement = clone.querySelector('.gallery__item');
-    if (!cardElement) {
-      throw new Error('Root .card element not found inside #card-catalog');
-    }
-    if (!(cardElement instanceof HTMLElement)) {
-      throw new Error('not an HTMLElement');
+    if (!cardElement || !(cardElement instanceof HTMLElement)) {
+      throw new Error('Root .gallery__item element not found or not HTMLElement in #card-catalog');
     }
 
     this.element = cardElement;
@@ -37,6 +38,10 @@ export class ProductCard {
 
     // 5. Data-атрибут
     setElementData(this.element, { productId: this.product.id });
+
+    this.element.addEventListener('click', () => {
+      this.eventEmitter.emit('product:selected', this.product);
+    });
   }
 
   public getElement(): HTMLElement {

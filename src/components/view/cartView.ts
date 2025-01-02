@@ -1,26 +1,19 @@
-import { CartItem } from '../../types';
-import { CartItemView } from './CartItemView';
 import { EventEmitter } from '../base/events';
+import { ICartItem } from '../../types';
 
 /**
- * Класс CartView управляет отображением корзины товаров.
- * Он:
- *  1) Клонирует шаблон #basket (обёртка, ul, кнопка)
- *  2) Для каждого CartItem создаёт CartItemView
- *  3) Обновляет сумму и кнопку "Оформить"
+ * Класс CartView отвечает за отображение корзины и взаимодействие с пользователем.
  */
 export class CartView {
-  private container: HTMLElement;
-  private totalElement: HTMLElement | null;
-  private submitButton: HTMLButtonElement | null;
-  private template: HTMLTemplateElement;
+  private element: HTMLElement;
+  private listElement: HTMLElement;
+  private totalPriceElement: HTMLElement;
+  private checkoutButton: HTMLButtonElement;
+  private itemTemplate: HTMLTemplateElement;
   private eventEmitter: EventEmitter;
 
-  constructor(container: HTMLElement, eventEmitter: EventEmitter) {
-    this.container = container;
+  constructor(eventEmitter: EventEmitter) {
     this.eventEmitter = eventEmitter;
-    this.totalElement = null;
-    this.submitButton = null;
 
     // Шаблон #basket
     const template = document.getElementById('basket') as HTMLTemplateElement;
@@ -28,55 +21,65 @@ export class CartView {
       throw new Error('Template with ID "basket" not found');
     }
 
-    this.template = template;
+    const clone = template.content.cloneNode(true) as HTMLElement;
+    this.element = clone.querySelector('.basket') as HTMLElement;
+    if (!this.element) {
+      throw new Error('Basket element not found in template');
+    }
+
+    this.listElement = this.element.querySelector('.basket__list') as HTMLElement;
+    this.totalPriceElement = this.element.querySelector('.basket__price') as HTMLElement;
+    this.checkoutButton = this.element.querySelector('.basket__button') as HTMLButtonElement;
+
+    this.itemTemplate = document.getElementById('card-basket') as HTMLTemplateElement;
+    if (!this.itemTemplate) {
+      throw new Error('Template with ID "card-basket" not found');
+    }
+
+    this.checkoutButton.addEventListener('click', () => {
+      this.eventEmitter.emit('cart:checkout');
+    });
+
   }
 
   /**
-   * Рендерим корзину (ul + items + кнопка "Оформить" + цена).
-   * Принимаем массив cartItems (данные), и total (число).
+  /**
+   * Обновляет отображение корзины.
+   * @param total - общая стоимость товаров.
+   * @param itemMarkup - готовая разметка списка товаров.
    */
-  public updateCart(cartItems: CartItem[], total: number): void {
-    // 1. Клонируем #basket
-    const clone = this.template.content.cloneNode(true) as HTMLElement;
+  public updateCart(itemMarkup: DocumentFragment, total: number): void {
+    this.renderCartItems(itemMarkup);
+    this.updateTotalPrice(total);
+    this.updateCheckoutButtonState(total > 0);
+  }
 
-    // 2. Находим ul.basket__list
-    const listElement = clone.querySelector('.basket__list');
-    if (!listElement) {
-      throw new Error('.basket__list not found in #basket template');
-    }
+   /**
+   * Вставляет готовую разметку в блок списка товаров.
+   * @param itemMarkup - разметка для вставки.
+   */
+   private renderCartItems(itemMarkup: DocumentFragment): void {
+    this.listElement.innerHTML = '';
+    this.listElement.appendChild(itemMarkup);
+  }
 
-    // 3. Для каждого cartItem создаём CartItemView
-    //    и добавляем в ul
-    cartItems.forEach((itemData, index) => {
-      const itemView = new CartItemView(itemData, this.eventEmitter);
-      const li = itemView.getElement();
+  /**
+   * Обновляет общую стоимость товаров.
+   * @param total - общая стоимость.
+   */
+  private updateTotalPrice(total: number): void {
+    this.totalPriceElement.textContent = `${total.toLocaleString()} синапсов`;
+  }
 
-      // При желании, если надо показывать индекс:
-      const indexEl = li.querySelector('.basket__item-index');
-      if (indexEl) {
-        indexEl.textContent = String(index + 1);
-      }
+  /**
+   * Управляет состоянием кнопки «Оформить».
+   * @param isEnabled - активна ли кнопка.
+   */
+  private updateCheckoutButtonState(isEnabled: boolean): void {
+    this.checkoutButton.disabled = !isEnabled;
+  }
 
-      listElement.appendChild(li);
-    });
-
-    // 4. Обновляем общую стоимость
-    const totalElement = clone.querySelector('.basket__price') as HTMLElement;
-    if (totalElement) {
-      totalElement.textContent = `${total.toLocaleString()} синапсов`;
-    }
-    this.totalElement = totalElement;
-
-    // 5. Кнопка "Оформить"
-    this.submitButton = clone.querySelector('.basket__button') as HTMLButtonElement;
-    if (this.submitButton) {
-      this.submitButton.addEventListener('click', () => {
-        this.eventEmitter.emit('cart:checkout');
-      });
-    }
-
-    // 6. Очищаем контейнер, вставляем новую корзину
-    this.container.innerHTML = '';
-    this.container.appendChild(clone);
+  public getElement(): HTMLElement {
+    return this.element;
   }
 }

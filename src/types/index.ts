@@ -15,7 +15,7 @@ export interface ICatalog {
 }
 
 // Типы данных для корзины
-export interface CartItem {
+export interface ICartItem {
   productId: string;
   price: number;
   title: string;
@@ -32,10 +32,10 @@ export interface OrderData {
 
 // Интерфейс корзины
 export interface ICart {
-  addItem(product: CartItem): void; // Добавление товара в корзину
+  addItem(product: ICartItem): void; // Добавление товара в корзину
   removeItem(productId: string): void; // Удаление товара из корзины
   calculateTotal(): number; // Подсчёт общей стоимости товаров
-  getItems(): CartItem[]; // Получение списка товаров в корзине
+  getItems(): ICartItem[]; // Получение списка товаров в корзине
 }
 
 // Интерфейс заказа
@@ -44,7 +44,6 @@ export interface IOrder {
   setDeliveryAddress(address: string): void; // Установка адреса доставки
   setPhone(phone: string): void; // Установка номера телефона
   setEmail(email: string): void; // Установка email
-  validateOrder(): string[]; // Проверка корректности данных заказа
 }
 
 // Интерфейс для класса CatalogView
@@ -57,10 +56,7 @@ export interface ICatalogView {
 
 // Интерфейс для класса ProductDetailView
 export interface IProductDetailView {
-  container: HTMLElement; // Контейнер для отображения разметки
-
   render(product: { title: string; price: number; description: string; category: string; image: string }): HTMLElement; // Метод для создания и возврата разметки карточки товара
-  bindEvents(onBuy: () => void, onRemove: () => void): void; // Привязка событий
 }
 
 
@@ -73,18 +69,6 @@ export interface IPaymentFormView {
   render(): void; // Рендер формы
   getData(): { paymentMethod: string; deliveryAddress: string }; // Получение данных формы
   bindEvents(onNext: () => void): void; // Привязка событий для перехода на следующий шаг
-}
-
-
-// Интерфейс для класса ContactFormView
-export interface IContactFormView {
-  container: HTMLElement; // Контейнер для формы контактных данных
-  email: HTMLInputElement; // Поле для ввода email
-  phone: HTMLInputElement; // Поле для ввода номера телефона
-
-  render(): void; // Рендер формы
-  getData(): { email: string; phone: string }; // Получение данных формы
-  bindEvents(onSubmit: () => void): void; // Привязка событий для завершения оформления заказа
 }
 
 // Интерфейс для общего поля формы
@@ -114,7 +98,6 @@ export interface IModal {
   addEventListeners(): void; // Добавляет обработчики событий
 
   _modalElement: HTMLElement; // Элемент модального окна
-  _content: string | HTMLElement; // Контент модального окна
 }
 
 export interface ProductItem {

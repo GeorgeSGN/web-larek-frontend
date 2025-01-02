@@ -7,92 +7,157 @@ import { ProductDetailView } from './components/view/productDetailView';
 import { Modal } from './components/view/modal';
 import { EventEmitter } from './components/base/events';
 import { API_URL, CDN_URL } from './utils/constants'; 
-import { ensureElement, setElementData } from './utils/utils';
-import { Product } from './types';
+import { ensureElement } from './utils/utils';
+import { Product, ICartItem } from './types';
 import { CartView } from './components/view/cartView';
 import { PaymentFormView } from './components/view/paymentFormView';
 import { ContactFormView } from './components/view/contactFormView';
 import { OrderSuccessView } from './components/view/orderSuccessView';
 
-// Создаем экземпляр API
+// Создаем экземпляр API, eventEmitter
 const api = new Api(API_URL);
 const eventEmitter = new EventEmitter();
 
 // Создаем экземпляры каталога и представления каталога
 const catalog = new Catalog();
 const catalogContainer = ensureElement<HTMLElement>('.gallery');
-if (!catalogContainer) {
-  throw new Error('Gallery container element not found in DOM');
-}
 const catalogView = new CatalogView(catalogContainer);
 
-// Контейнер для модального окна
-const modalContainer = ensureElement<HTMLElement>('#modal-container');
-const modalContent = modalContainer.querySelector('.modal__content') as HTMLElement;
-if (!modalContent) {
-  throw new Error('Content element not found in modal container');
-}
-const modal = new Modal(modalContent);
+const modal = new Modal();
 
-// Детальный просмотр товара
-const productDetailView = new ProductDetailView(modalContent);
+// Глобальная переменная счётчика
+const basketCounterEl = document.querySelector('.header__basket-counter') as HTMLElement || null;
+// Обновляем счетчик корзины
+function updateBasketCounter() {
+  if (!basketCounterEl) return;
+  basketCounterEl.textContent = String(cart.getItems().length);
+}
 
 // Создаем экземпляры корзины, ее представления и заказа
 const cart = new Cart();
-const cartView = new CartView(modalContent, eventEmitter);
+const cartView = new CartView(eventEmitter);
+
 const order = new Order();
-
 // Создаем экземпляры форм
-const paymentFormView = new PaymentFormView(modalContent, eventEmitter);
-const contactFormView = new ContactFormView(modalContent);
+const paymentFormView = new PaymentFormView(eventEmitter);
+const contactFormView = new ContactFormView();
 
-const orderSuccessView = new OrderSuccessView(modalContent);
+// Детальный просмотр товара
+const productDetailView = new ProductDetailView();
 
+contactFormView.setOnInput((email, phone) => {
+  order.setEmail(email);
+  order.setPhone(phone);
 
-// Обновляем счетчик корзины
-function updateBasketCounter() {
-  const basketCounter = document.querySelector('.header__basket-counter');
-  if (basketCounter) {
-    basketCounter.textContent = String(cart.getItems().length);
-  }
-}
+  const errors = order.validateSecondStep();
+  contactFormView.displayErrors(errors);
+  contactFormView.highlightInvalidFields(errors);
 
-// Открываем корзину
-function openCartModal() {
-  // Рендерим через cartView
-  cartView.updateCart(cart.getItems(), cart.calculateTotal());
-  modal.open();
-}
-
-eventEmitter.on<{ productId: string }>('cart:remove', ({ productId }) => {
-  // Удаляем из модели
-  cart.removeItem(productId);
-  // Обновляем счётчик
-  updateBasketCounter();
-  // Ререндерим cartView
-  cartView.updateCart(cart.getItems(), cart.calculateTotal());
+  const isValid = errors.length === 0;
+  contactFormView.updateSubmitButtonState(isValid);
 });
+
+contactFormView.setOnSubmit(async () => {
+  const errors = order.validateSecondStep();
+  if (errors.length === 0) {
+    try {
+      await api.post('/order', {
+        payment: order.getPaymentMethod(),
+        email: order.getEmail(),
+        phone: order.getPhone(),
+        address: order.getDeliveryAddress(),
+        total: cart.calculateTotal(),
+        items: cart.getItems().map((item) => item.productId),
+      });
+      showOrderSuccess();
+    } catch (error) {
+      alert(`Ошибка при оформлении заказа: ${error}`);
+    }
+  } else {
+    contactFormView.displayErrors(errors);
+    contactFormView.highlightInvalidFields(errors);
+  }
+});
+
+
+const orderSuccessView = new OrderSuccessView();
+orderSuccessView.setOnClose(() => {
+  modal.close();
+});
+
+// Удаление товаров из корзины
+eventEmitter.on<{ productId: string }>('cart:remove', ({ productId }) => {
+  cart.removeItem(productId);
+  updateBasketCounter();
+
+  const itemMarkup = generateCartItemsMarkup(cart.getItems());
+  cartView.updateCart(itemMarkup, cart.calculateTotal());
+});
+
+function generateCartItemsMarkup(items: ICartItem[]): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+  const template = document.getElementById('card-basket') as HTMLTemplateElement;
+
+  if (!template) {
+    throw new Error('Template with ID "card-basket" not found');
+  }
+
+  items.forEach((item, index) => {
+    const clone = template.content.cloneNode(true) as HTMLElement;
+
+    const indexElement = clone.querySelector('.basket__item-index') as HTMLElement;
+    if (indexElement) indexElement.textContent = String(index + 1);
+
+    const titleElement = clone.querySelector('.card__title') as HTMLElement;
+    if (titleElement) titleElement.textContent = item.title;
+
+    const priceElement = clone.querySelector('.card__price') as HTMLElement;
+    if (priceElement) priceElement.textContent = `${item.price.toLocaleString()} синапсов`;
+
+    const deleteButton = clone.querySelector('.basket__item-delete') as HTMLElement;
+    if (deleteButton) {
+      deleteButton.addEventListener('click', () => {
+        eventEmitter.emit('cart:remove', { productId: item.productId });
+      });
+    }
+
+    fragment.appendChild(clone);
+  });
+
+  return fragment;
+}
 
 // При нажатии «Оформить»
 eventEmitter.on('cart:checkout', () => {
   handleCheckoutClick();
 });
 
-// Обработка кнопки «Оформить»
+// Кнопка «Корзина» в шапке
+const basketButton = document.querySelector('.header__basket');
+if (basketButton) {
+  basketButton.addEventListener('click', openCartModal);
+}
+
+// Открываем корзину
+function openCartModal() {
+  const itemMarkup = generateCartItemsMarkup(cart.getItems());
+  cartView.updateCart(itemMarkup, cart.calculateTotal());
+  modal.setContent(cartView.getElement());
+  modal.open();
+}
+
+// Валидация первого шага
 function handleCheckoutClick() {
-  paymentFormView.render();
+  modal.setContent(paymentFormView.render());
   paymentFormView.bindEvents(() => {
     const data = paymentFormView.getData();
-
-    // Заполняем адрес доставки
     order.setDeliveryAddress(data.deliveryAddress);
 
-    const errors = order.validateOrder();
+    const errors = order.validateFirstStep();
     if (errors.length === 0) {
-      order.setIsSecondStep(true);
-      openContactForm(); // переходим на второй шаг
+      openContactForm();
     } else {
-      alert(`Ошибки: ${errors.join('\n')}`);
+      paymentFormView.displayErrors(errors); // Отображаем ошибки
     }
   });
 
@@ -103,76 +168,26 @@ function handleCheckoutClick() {
 
 // Второй шаг — форма контактов
 function openContactForm() {
-  contactFormView.render();
-
-  // делаем колбэк асинхронным
-  contactFormView.bindEvents(async () => {
-    const { email, phone } = contactFormView.getData();
-    order.setEmail(email);
-    order.setPhone(phone);
-
-    const errors = order.validateOrder();
-    if (errors.length === 0) {
-      // Пытаемся отправить заказ
-      try {
-        // Формируем «тело» запроса так, как нужно бэкенду
-        // (payment, email, phone, address, total, items[])
-        const orderData = {
-          payment:  order.getPaymentMethod(),
-          email:    order.getEmail(),
-          phone:    order.getPhone(),
-          address:  order.getDeliveryAddress(),
-          total:    cart.calculateTotal(),
-          items:    cart.getItems().map(item => item.productId),
-        };
-
-        // Выполняем запрос
-        await api.post('/order', orderData);
-
-        // Показываем успех, чистим корзину
-        showOrderSuccess();
-      } catch (error) {
-        alert(`Ошибка при оформлении заказа: ${error}`);
-      }
-    } else {
-      alert(`Ошибки: ${errors.join('\n')}`);
-    }
-  });
+  contactFormView.show();
+  modal.setContent(contactFormView.render());
+  modal.open();
 }
 
 // Показываем успех
 function showOrderSuccess() {
-  // Сумму нужно взять до очистки корзины
   const totalAmount = cart.calculateTotal();
-
-  // Очищаем контейнер модалки
-  modalContent.innerHTML = '';
-
-  // Рендерим успех
-  const successElement = orderSuccessView.render(totalAmount);
-  modalContent.appendChild(successElement);
-
-  // Чистим корзину
   cart.clearCart();
   updateBasketCounter();
 
-  // Кнопка «Закрыть»
-  const closeButton = modalContent.querySelector('.order-success__close') as HTMLButtonElement;
-  if (closeButton) {
-    closeButton.addEventListener('click', () => {
-      modal.close();
-    });
-  }
-}
-
-// Кнопка «Корзина» в шапке
-const basketButton = document.querySelector('.header__basket');
-if (basketButton) {
-  basketButton.addEventListener('click', openCartModal);
+  orderSuccessView.setTotalAmount(totalAmount);
+  modal.setContent(orderSuccessView.render());
+  modal.open();
 }
 
 // Добавление товара в корзину
 function addToCart(product: Product) {
+  if (product.price === null || product.price === 0) return;
+
   if (!cart.getItems().some((item) => item.productId === product.id)) {
     cart.addItem({
       productId: product.id,
@@ -193,16 +208,43 @@ async function loadCatalog() {
     catalog.setProducts(items);
 
     const cards = items.map((product) => {
-      const productCard = new ProductCard(product)
+      const productCard = new ProductCard(product, eventEmitter);
       return productCard.getElement();
     });
-    
+
     catalogView.renderCatalog(cards);
     catalogView.bindCardEvents(cards, handleCardClick);
   } catch (error) {
     alert('Ошибка при загрузке каталога');
   }
 }
+
+// Событие «product:selected»
+eventEmitter.on<Product>('product:selected', (product) => {
+  productDetailView.render({
+    title: product.title,
+    price: product.price,
+    description: product.description,
+    category: product.category,
+    image: `${CDN_URL}/${product.image}`,
+  });
+
+  const inCart = cart.getItems().some(i => i.productId === product.id);
+  productDetailView.setIsInCart(inCart);
+
+  const addToCartButton = productDetailView.getElement().querySelector('.card__button') as HTMLButtonElement;
+  if (addToCartButton && (product.price === null || product.price === 0)) {
+    addToCartButton.disabled = true;
+  }
+
+  productDetailView.bindAddToCart(() => {
+    addToCart(product);
+    productDetailView.setIsInCart(true);
+  });
+
+  modal.setContent(productDetailView.getElement());
+  modal.open();
+});
 
 // Обработка клика по карточке
 function handleCardClick(event: Event) {
@@ -218,36 +260,6 @@ function handleCardClick(event: Event) {
 
   eventEmitter.emit('product:selected', product);
 }
-
-// Событие «product:selected»
-eventEmitter.on<Product>('product:selected', (product) => {
-  productDetailView.render({
-    title: product.title,
-    price: product.price,
-    description: product.description,
-    category: product.category,
-    image: `${CDN_URL}/${product.image}`
-  });
-
-  const button = modalContent.querySelector('.card__button') as HTMLButtonElement;
-  if (!button) {
-    return;
-  }
-
-  // Если товар уже в корзине
-  if (cart.getItems().some((i) => i.productId === product.id)) {
-    button.textContent = 'Уже в корзине';
-    button.disabled = true;
-  }
-
-  button.addEventListener('click', () => {
-    addToCart(product);
-    button.textContent = 'Уже в корзине';
-    button.disabled = true;
-  });
-
-  modal.open();
-});
 
 // При загрузке страницы — загрузить каталог
 document.addEventListener('DOMContentLoaded', loadCatalog);

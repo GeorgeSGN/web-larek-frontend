@@ -1,4 +1,4 @@
-import { Product, ICatalog, CartItem, ICart, IOrder } from "../../types/index";
+import { Product, ICatalog, ICartItem, ICart, IOrder } from "../../types/index";
 
 /**
  * Класс Catalog управляет данными каталога товаров.
@@ -36,7 +36,7 @@ export class Catalog implements ICatalog {
  * Класс Cart управляет данными корзины, включая добавление, удаление и вычисление итоговой стоимости товаров.
  */
 export class Cart implements ICart {
-  private items: CartItem[] = []; // Массив объектов корзины
+  private items: ICartItem[] = []; // Массив объектов корзины
 
   /**
    * Конструктор инициализирует корзину c пустым массивом товаров.
@@ -48,7 +48,7 @@ export class Cart implements ICart {
   /** Добавляет товар в корзину
    * @param product - объект товара для добавления
    */
-  addItem(product: CartItem): void {
+  addItem(product: ICartItem): void {
     this.items.push(product);
   }
 
@@ -72,7 +72,7 @@ export class Cart implements ICart {
    * Возвращает массив текущих товаров в корзине.
    * @returns массив объектов корзины
    */
-  getItems(): CartItem[] {
+  getItems(): ICartItem[] {
     return [...this.items]
   }
 
@@ -92,7 +92,6 @@ export class Order implements IOrder {
   private deliveryAddress: string; // Адрес доставки
   private phone: string;
   private email: string;
-  private isSecondStep: boolean; // Флаг для второго шага оформления заказа
 
   /**
    * Конструктор инициализирует заказ c пустыми данными.
@@ -102,7 +101,6 @@ export class Order implements IOrder {
     this.deliveryAddress = '';
     this.phone = '';
     this.email = '';
-    this.isSecondStep = false; // На первом шаге
   }
 
   /**
@@ -138,14 +136,6 @@ export class Order implements IOrder {
   }
 
   /**
-   * Устанавливает флаг для второго шага (для валидации телефона и email)
-   * @param isSecondStep - флаг, указывающий на второй шаг
-   */
-  setIsSecondStep(isSecondStep: boolean): void {
-    this.isSecondStep = isSecondStep;
-  }
-
-  /**
    * Получает способ оплаты.
    * @returns строка, представляющая способ оплаты
    */
@@ -177,26 +167,22 @@ export class Order implements IOrder {
     return this.email;
   }
 
-  /**
-   * Проверяет корректность данных заказа.
-   * @returns массив строк с ошибками или пустой массив, если всё корректно
-   */
-  validateOrder(): string[] {
+  validateFirstStep(): string[] {
     const errors: string[] = [];
-
     if (!this.paymentMethod) errors.push('Укажите способ оплаты.');
     if (!this.deliveryAddress) errors.push('Укажите адрес доставки.');
-
-    // Валидация для второго шага
-    if (this.isSecondStep) {
-      if (!this.phone || !/^\+?[0-9\s-]{7,15}$/.test(this.phone)) {
-        errors.push('Введите корректный номер телефона (например, +71234567890).');
-      }
-      if (!this.email || !/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(this.email)) {
-        errors.push('Введите корректный адрес электронной почты (например, test@test.ru).');
-      }
-    }
-
     return errors;
   }
+
+  validateSecondStep(): string[] {
+    const errors: string[] = [];
+    if (!this.phone || !/^\+?[0-9\s-]{7,15}$/.test(this.phone)) {
+      errors.push('Введите корректный номер телефона.');
+    }
+    if (!this.email || !/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(this.email)) {
+      errors.push('Введите корректный email.');
+    }
+    return errors;
+  }
+  
 }

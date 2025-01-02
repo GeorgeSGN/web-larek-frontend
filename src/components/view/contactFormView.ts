@@ -1,95 +1,121 @@
-import { IContactFormView } from '../../types';
-
 /**
  * Класс ContactFormView управляет отображением второго шага оформления заказа,
  * включая ввод email и номера телефона, используя HTML-шаблон.
  */
-export class ContactFormView implements IContactFormView {
-  container: HTMLElement;
-  email: HTMLInputElement | null;
-  phone: HTMLInputElement | null;
+export class ContactFormView {
+  private container: HTMLElement;
+  private formElement: HTMLFormElement | null = null;
+  private emailInput: HTMLInputElement | null = null;
+  private phoneInput: HTMLInputElement | null = null;
+  private formErrorsElement: HTMLElement | null = null;
 
-  constructor(container: HTMLElement) {
-    this.container = container;
-    this.email = null;
-    this.phone = null;
-  }
+  private onInputCallback: ((email: string, phone: string) => void) | null = null;
+  private onSubmitCallback: (() => void) | null = null;
 
-  /**
-   * Отображает форму ввода email и номера телефона,
-   * используя HTML-шаблон.
-   */
-  render(): void {
+  constructor() {
+    this.container = document.createElement('div');
+
     const template = document.getElementById('contacts') as HTMLTemplateElement;
     if (!template) {
       throw new Error('Template with ID "contacts" not found');
     }
 
-    // Клонируем содержимое шаблона
     const clone = template.content.cloneNode(true) as HTMLElement;
+    const form = clone.querySelector('form');
+    if (!form || !(form instanceof HTMLFormElement)) {
+      throw new Error('No <form> found in #contacts template');
+    }
+    this.formElement = form;
 
-    // Очищаем контейнер и добавляем содержимое шаблона
-    this.container.innerHTML = '';
-    this.container.appendChild(clone);
+    // Инициализируем поля
+    this.emailInput = form.querySelector('input[name="email"]') as HTMLInputElement;
+    this.phoneInput = form.querySelector('input[name="phone"]') as HTMLInputElement;
+    this.formErrorsElement = form.querySelector('.form__errors') as HTMLElement;
 
-    // Находим элементы формы
-    this.email = this.container.querySelector('input[name="email"]') as HTMLInputElement;
-    this.phone = this.container.querySelector('input[name="phone"]') as HTMLInputElement;
+    // Навешиваем обработчики ввода
+    this.emailInput?.addEventListener('input', () => {
+      if (this.onInputCallback) {
+        this.onInputCallback(this.emailInput?.value || '', this.phoneInput?.value || '');
+      }
+    });
 
-    // Устанавливаем начальное состояние кнопки
-    this.updateSubmitButtonState();
+    this.phoneInput?.addEventListener('input', () => {
+      if (this.onInputCallback) {
+        this.onInputCallback(this.emailInput?.value || '', this.phoneInput?.value || '');
+      }
+    });
+
+    // Навешиваем обработчик submit
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (this.onSubmitCallback) {
+        this.onSubmitCallback();
+      }
+    });
   }
 
   /**
-   * Возвращает данные формы: email и номер телефона.
-   * @returns объект с полями email и phone.
+   * Привязывает коллбек для событий ввода.
    */
-  getData(): { email: string; phone: string } {
-    const email = this.email?.value || '';
-    const phone = this.phone?.value || '';
-    return { email, phone };
+  public setOnInput(callback: (email: string, phone: string) => void): void {
+    this.onInputCallback = callback;
+  }
+
+  /**
+   * Привязывает коллбек для события отправки формы.
+   */
+  public setOnSubmit(callback: () => void): void {
+    this.onSubmitCallback = callback;
+  }
+
+  /**
+   * Вызывается извне, чтобы отобразить форму (вставить её в контейнер).
+   */
+  public show(): void {
+    this.container.innerHTML = '';
+    if (this.formElement) {
+      this.container.appendChild(this.formElement);
+    }
   }
 
   /**
    * Обновляет состояние кнопки "Оплатить" в зависимости от валидности полей.
    */
-  updateSubmitButtonState(): void {
+  public updateSubmitButtonState(isValid: boolean): void {
     const submitButton = this.container.querySelector('.button') as HTMLButtonElement;
-
-    if (!submitButton) return; // Если кнопка не найдена, выходим
-
-    const isEmailValid = this.email?.value.trim() && /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(this.email.value);
-    const isPhoneValid = this.phone?.value.trim() && /^\+?[0-9\s-]{7,15}$/.test(this.phone.value);
-
-    submitButton.disabled = !(isEmailValid && isPhoneValid); // Блокируем кнопку, если данные некорректны
+    if (submitButton) {
+      submitButton.disabled = !isValid;
+    }
   }
 
   /**
-   * Привязывает события для завершения оформления заказа.
-   * @param onSubmit - функция, вызываемая при нажатии на кнопку "Оплатить".
+   * Подсвечивает невалидные поля на основе ошибок.
    */
-  bindEvents(onSubmit: () => void): void {
-    const form = this.container.querySelector('form');
-    if (!form) return; 
+  public highlightInvalidFields(errors: string[]): void {
+    if (this.emailInput) {
+      const emailError = errors.find((error) => error.includes('email'));
+      this.emailInput.setCustomValidity(emailError || '');
+    }
 
-    // Обновляем состояние кнопки при каждом вводе данных
-    this.email?.addEventListener('input', () => this.updateSubmitButtonState());
-    this.phone?.addEventListener('input', () => this.updateSubmitButtonState());
+    if (this.phoneInput) {
+      const phoneError = errors.find((error) => error.includes('телефон'));
+      this.phoneInput.setCustomValidity(phoneError || '');
+    }
+  }
 
-    form.addEventListener('submit', (event) => {
-      event.preventDefault(); 
-      
-      const isEmailValid =
-      this.email &&
-      /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(this.email.value);
-      const isPhoneValid =
-        this.phone &&
-        /^\+?[0-9\s-]{7,15}$/.test(this.phone.value);
+  /**
+   * Отображает ошибки в поле ошибок.
+   */
+  public displayErrors(errors: string[]): void {
+    if (this.formErrorsElement) {
+      this.formErrorsElement.textContent = errors.join(' ');
+    }
+  }
 
-      if (isEmailValid && isPhoneValid) {
-        // Вызываем ваш колбэк
-        onSubmit();
-      }
-    })
+  /**
+   * Получает DOM-элемент формы для вставки в модальное окно.
+   */
+  public render(): HTMLElement {
+    return this.container;
   }
 }

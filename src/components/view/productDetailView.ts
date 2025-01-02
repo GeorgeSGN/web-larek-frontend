@@ -5,19 +5,20 @@ import { IProductDetailView } from '../../types/index';
  * в модальном окне, используя HTML-шаблон #card-preview.
  */
 export class ProductDetailView implements IProductDetailView {
-  container: HTMLElement;
+  private element: HTMLElement;   // Храним корневой элемент
+  private addToCartButton: HTMLButtonElement | null = null;
 
-  constructor(container: HTMLElement) {
-    this.container = container;
+  constructor() {
+    this.element = document.createElement('div'); 
   }
 
   /**
    * Отображает информацию о товаре в контейнере, используя HTML-шаблон.
    * @param product - объект с данными о товаре (название, цена, описание, категория, изображение).
    */
-  render(product: {
+  public render(product: {
     title: string;
-    price: number;
+    price: number | null;
     description: string;
     category: string;
     image: string;
@@ -69,21 +70,37 @@ export class ProductDetailView implements IProductDetailView {
         priceElement.textContent = `${safePrice.toLocaleString()} синапсов`;
       }
 
-    // Очищаем контейнер и добавляем заполненную разметку
-    this.container.innerHTML = '';
-    this.container.appendChild(clone);
+    this.addToCartButton = clone.querySelector('.card__button') as HTMLButtonElement | null;
 
-    return this.container;
+    // Очищаем контейнер и добавляем заполненную разметку
+    this.element.innerHTML = '';
+    this.element.appendChild(clone);
+
+    return this.element;
   }
 
   /**
-   * Привязывает обработчик события к кнопке "В корзину".
-   * @param onAddToCart - функция, вызываемая при нажатии на кнопку.
+   * Вызываем, чтобы назначить обработчик "Добавить в корзину".
+   * Кнопка относится к блоку "Детали продукта".
+   * 
+   * @param onAddToCart — колбэк, вызываемый при клике
    */
-  bindEvents(onAddToCart: () => void): void {
-    const button = this.container.querySelector('.button_buy');
-    if (button) {
-      button.addEventListener('click', onAddToCart);
+  public bindAddToCart(onAddToCart: () => void): void {
+    if (!this.addToCartButton) return; // значит, render() ещё не вызывали
+    this.addToCartButton.addEventListener('click', onAddToCart);
+  }
+
+  /**
+   * (7) Метод, управляющий состоянием кнопки (в корзине / не в корзине).
+   */
+  public setIsInCart(inCart: boolean): void {
+    if (!this.addToCartButton) return;
+    if (inCart) {
+      this.addToCartButton.textContent = 'Уже в корзине';
+      this.addToCartButton.disabled = true;
+    } else {
+      this.addToCartButton.textContent = 'В корзину';
+      this.addToCartButton.disabled = false;
     }
   }
 
@@ -96,5 +113,9 @@ export class ProductDetailView implements IProductDetailView {
       'другое': 'other',
     };
     return categoryMapping[category.toLowerCase()] || category.toLowerCase();
+  }
+
+  public getElement(): HTMLElement {
+    return this.element;
   }
 }

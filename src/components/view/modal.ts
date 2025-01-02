@@ -2,10 +2,8 @@ import { IModal } from "../../types";
 
 export class Modal implements IModal {
   _modalElement: HTMLElement;
-  _content: string | HTMLElement;
 
-  constructor(content: string | HTMLElement) {
-    this._content = content;
+  constructor() {
     const modalElement = document.getElementById('modal-container');
     if (!modalElement) {
       throw new Error('Modal container element not found in DOM');
@@ -13,38 +11,42 @@ export class Modal implements IModal {
     this._modalElement = modalElement;
   }
 
-  open(): void {
+  /**
+   * Устанавливает содержимое модального окна
+   * Для открытия вызывается open().
+   */
+  public setContent(content: string | HTMLElement): void {
     const contentContainer = this._modalElement.querySelector('.modal__content');
     if (!contentContainer) {
       throw new Error('Content container not found in modal');
     }
 
-    if (typeof this._content === 'string') {
-      contentContainer.innerHTML = this._content;
-    } else {
-      if (!contentContainer.contains(this._content)) {
-        contentContainer.innerHTML = ''; // Очистка перед добавлением
-        contentContainer.appendChild(this._content);
-      }
-    }
+    // Очищаем перед добавлением
+    contentContainer.innerHTML = '';
 
-    // Устанавливаем фиксированное позиционирование
+    if (typeof content === 'string') {
+      contentContainer.innerHTML = content;
+    } else {
+      // Если пришёл HTMLElement, вставляем его
+      contentContainer.appendChild(content);
+    }
+  }
+
+  public open(): void {
+    // Превращаем контейнер в видимый "оверлей"
+    this._modalElement.classList.add('modal_active');
     this._modalElement.style.position = 'fixed';
     this._modalElement.style.top = '0';
     this._modalElement.style.left = '0';
     this._modalElement.style.width = '100vw';
     this._modalElement.style.height = '100vh';
 
-    this._modalElement.classList.add('modal_active');
+    // Вешаем слушатели на закрытие
     this.addEventListeners();
   }
 
-  close(): void {
+  public close(): void {
     this._modalElement.classList.remove('modal_active');
-    const contentContainer = this._modalElement.querySelector('.modal__content');
-    if (contentContainer) {
-      contentContainer.innerHTML = '';
-    }
 
     // Сбрасываем стили
     this._modalElement.style.position = '';
@@ -58,14 +60,15 @@ export class Modal implements IModal {
     const closeButton = this._modalElement.querySelector('.modal__close');
 
     if (closeButton) {
-      closeButton.addEventListener('click', () => this.close());
+      closeButton.addEventListener('click', () => this.close(), { once: true });
+      // once: true - чтобы при каждом открытии заново не плодились слушатели
     }
 
     this._modalElement.addEventListener('click', (event) => {
       if (event.target === this._modalElement) {
         this.close();
       }
-    });
+    }, { once: true });
   }
 }
 

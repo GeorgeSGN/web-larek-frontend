@@ -1,6 +1,8 @@
 import './scss/styles.scss';
 import { Api } from './components/base/api';
-import { Catalog, Cart, Order } from './components/base/models';
+import { Catalog } from './components/base/catalog';
+import { Cart } from './components/base/cart';
+import { Order } from './components/base/order';
 import { CatalogView } from './components/view/catalogView';
 import { ProductCard } from './components/view/productCard';
 import { ProductDetailView } from './components/view/productDetailView';
@@ -8,7 +10,7 @@ import { Modal } from './components/view/modal';
 import { EventEmitter } from './components/base/events';
 import { API_URL, CDN_URL } from './utils/constants'; 
 import { ensureElement } from './utils/utils';
-import { Product, ICartItem } from './types';
+import { Product } from './types';
 import { CartView } from './components/view/cartView';
 import { PaymentFormView } from './components/view/paymentFormView';
 import { ContactFormView } from './components/view/contactFormView';
@@ -41,6 +43,18 @@ const order = new Order();
 // Создаем экземпляры форм
 const paymentFormView = new PaymentFormView(eventEmitter);
 const contactFormView = new ContactFormView();
+
+paymentFormView.setOnSubmit(() => {
+  const data = paymentFormView.getData();
+  order.setDeliveryAddress(data.deliveryAddress);
+
+  const errors = order.validateFirstStep();
+  if (errors.length === 0) {
+    openContactForm();
+  } else {
+    paymentFormView.displayErrors(errors);
+  }
+});
 
 // Детальный просмотр товара
 const productDetailView = new ProductDetailView();
@@ -89,43 +103,8 @@ orderSuccessView.setOnClose(() => {
 eventEmitter.on<{ productId: string }>('cart:remove', ({ productId }) => {
   cart.removeItem(productId);
   updateBasketCounter();
-
-  const itemMarkup = generateCartItemsMarkup(cart.getItems());
-  cartView.updateCart(itemMarkup, cart.calculateTotal());
+  cartView.setData(cart.getItems(), cart.calculateTotal());
 });
-
-function generateCartItemsMarkup(items: ICartItem[]): DocumentFragment {
-  const fragment = document.createDocumentFragment();
-  const template = document.getElementById('card-basket') as HTMLTemplateElement;
-
-  if (!template) {
-    throw new Error('Template with ID "card-basket" not found');
-  }
-
-  items.forEach((item, index) => {
-    const clone = template.content.cloneNode(true) as HTMLElement;
-
-    const indexElement = clone.querySelector('.basket__item-index') as HTMLElement;
-    if (indexElement) indexElement.textContent = String(index + 1);
-
-    const titleElement = clone.querySelector('.card__title') as HTMLElement;
-    if (titleElement) titleElement.textContent = item.title;
-
-    const priceElement = clone.querySelector('.card__price') as HTMLElement;
-    if (priceElement) priceElement.textContent = `${item.price.toLocaleString()} синапсов`;
-
-    const deleteButton = clone.querySelector('.basket__item-delete') as HTMLElement;
-    if (deleteButton) {
-      deleteButton.addEventListener('click', () => {
-        eventEmitter.emit('cart:remove', { productId: item.productId });
-      });
-    }
-
-    fragment.appendChild(clone);
-  });
-
-  return fragment;
-}
 
 // При нажатии «Оформить»
 eventEmitter.on('cart:checkout', () => {
@@ -140,37 +119,32 @@ if (basketButton) {
 
 // Открываем корзину
 function openCartModal() {
-  const itemMarkup = generateCartItemsMarkup(cart.getItems());
-  cartView.updateCart(itemMarkup, cart.calculateTotal());
+  cartView.setData(cart.getItems(), cart.calculateTotal());
   modal.setContent(cartView.getElement());
   modal.open();
 }
 
 // Валидация первого шага
 function handleCheckoutClick() {
+  // Показываем (сбрасываем) PaymentForm, если нужно
+  paymentFormView.show();
+
+  // Вставляем в модалку
   modal.setContent(paymentFormView.render());
-  paymentFormView.bindEvents(() => {
-    const data = paymentFormView.getData();
-    order.setDeliveryAddress(data.deliveryAddress);
 
-    const errors = order.validateFirstStep();
-    if (errors.length === 0) {
-      openContactForm();
-    } else {
-      paymentFormView.displayErrors(errors); // Отображаем ошибки
-    }
-  });
-
+  // Событие «method selected»
   eventEmitter.on<{ method: string }>('order:paymentMethodSelected', ({ method }) => {
     order.setPaymentMethod(method);
   });
+
+  // Открываем окно (если было закрыто)
+  modal.open();
 }
 
 // Второй шаг — форма контактов
 function openContactForm() {
   contactFormView.show();
   modal.setContent(contactFormView.render());
-  modal.open();
 }
 
 // Показываем успех

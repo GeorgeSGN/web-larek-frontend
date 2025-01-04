@@ -1,62 +1,69 @@
 import { EventEmitter } from '../base/events';
 import { ICartItem } from '../../types';
 
-/**Cart
+/**
  * Класс CartItemView отвечает за отрисовку одного элемента списка корзины.
  * Он клонирует шаблон (#card-basket), вставляет данные
  * и инициирует кнопку удаления через EventEmitter.
  */
 export class CartItemView {
-  private item: ICartItem;
   private element: HTMLElement;
-  private eventEmitter: EventEmitter;
 
-  constructor(item: ICartItem, eventEmitter: EventEmitter) {
-    this.item = item;
-    this.eventEmitter = eventEmitter;
-
-    // Ищем шаблон #card-basket
+  constructor(
+    private item: ICartItem,
+    private eventEmitter: EventEmitter,
+    private index?: number
+  ) {
+    // Шаблон #card-basket
     const template = document.getElementById('card-basket') as HTMLTemplateElement;
     if (!template) {
       throw new Error('Template with ID "card-basket" not found');
     }
 
-    // Клонируем содержимое шаблона
+    // Клонируем
     const clone = template.content.cloneNode(true) as HTMLElement;
 
-    // Сохраняем корневой элемент <li>
-    this.element = clone.querySelector('.basket__item') as HTMLElement;
-    if (!this.element) {
+    // Ищем .basket__item в клоне
+    const liElement = clone.querySelector('.basket__item') as HTMLElement;
+    if (!liElement) {
       throw new Error('basket__item not found inside #card-basket template');
     }
 
-    // Заполняем данные о товаре
-    const titleEl = this.element.querySelector('.card__title') as HTMLElement;
+    this.element = liElement;
+
+    // Заполняем index
+    if (typeof this.index === 'number') {
+      const indexEl = liElement.querySelector('.basket__item-index') as HTMLElement;
+      if (indexEl) {
+        indexEl.textContent = String(this.index);
+      }
+    }
+
+    // Заполняем title
+    const titleEl = liElement.querySelector('.card__title') as HTMLElement;
     if (titleEl) {
-      titleEl.textContent = item.title;
+      titleEl.textContent = this.item.title;
     }
 
-    const priceEl = this.element.querySelector('.card__price') as HTMLElement;
+    // Заполняем price
+    const priceEl = liElement.querySelector('.card__price') as HTMLElement;
     if (priceEl) {
-      priceEl.textContent = `${(item.price || 0).toLocaleString()} синапсов`;
+      priceEl.textContent = `${(this.item.price || 0).toLocaleString()} синапсов`;
     }
 
-    // Проставляем data-product-id
-    this.element.dataset.productId = item.productId;
+    // data-product-id
+    liElement.dataset.productId = this.item.productId;
 
-    // Вешаем обработчик на кнопку удаления
-    const deleteButton = this.element.querySelector('.basket__item-delete') as HTMLElement;
+    // Кнопка удаления
+    const deleteButton = liElement.querySelector('.basket__item-delete') as HTMLElement;
     if (deleteButton) {
       deleteButton.addEventListener('click', () => {
-        // Вместо прямого cart.removeItem — эмитим событие
+        // Вместо removeItem(...) — эмитим событие
         this.eventEmitter.emit('cart:remove', { productId: this.item.productId });
       });
     }
   }
 
-  /**
-   * Возвращаем готовый <li> элемент
-   */
   public getElement(): HTMLElement {
     return this.element;
   }

@@ -1,4 +1,5 @@
 import { EventEmitter } from '../base/events';
+import { CartItemView } from './CartItemView';
 import { ICartItem } from '../../types';
 
 /**
@@ -9,8 +10,12 @@ export class CartView {
   private listElement: HTMLElement;
   private totalPriceElement: HTMLElement;
   private checkoutButton: HTMLButtonElement;
-  private itemTemplate: HTMLTemplateElement;
+
   private eventEmitter: EventEmitter;
+
+  // Новые поля, где храним данные корзины
+  private items: ICartItem[] = [];
+  private total = 0;
 
   constructor(eventEmitter: EventEmitter) {
     this.eventEmitter = eventEmitter;
@@ -31,54 +36,46 @@ export class CartView {
     this.totalPriceElement = this.element.querySelector('.basket__price') as HTMLElement;
     this.checkoutButton = this.element.querySelector('.basket__button') as HTMLButtonElement;
 
-    this.itemTemplate = document.getElementById('card-basket') as HTMLTemplateElement;
-    if (!this.itemTemplate) {
-      throw new Error('Template with ID "card-basket" not found');
-    }
-
+    // Слушатель на кнопку «Оформить»
     this.checkoutButton.addEventListener('click', () => {
       this.eventEmitter.emit('cart:checkout');
     });
-
   }
 
   /**
-  /**
-   * Обновляет отображение корзины.
-   * @param total - общая стоимость товаров.
-   * @param itemMarkup - готовая разметка списка товаров.
+   * (1) Публичный "set"‐метод, который сохраняет новые данные (items + total)
+   * и затем вызывает внутренний рендер.
    */
-  public updateCart(itemMarkup: DocumentFragment, total: number): void {
-    this.renderCartItems(itemMarkup);
-    this.updateTotalPrice(total);
-    this.updateCheckoutButtonState(total > 0);
+  public setData(items: ICartItem[], total: number): void {
+    this.items = items;
+    this.total = total;
+    this.render();
   }
 
-   /**
-   * Вставляет готовую разметку в блок списка товаров.
-   * @param itemMarkup - разметка для вставки.
+  /**
+   * (2) Рендерим корзину заново, используя поля `this.items` и `this.total`.
    */
-   private renderCartItems(itemMarkup: DocumentFragment): void {
+  private render(): void {
+    // 1. Очищаем список перед перерисовкой
     this.listElement.innerHTML = '';
-    this.listElement.appendChild(itemMarkup);
+
+    // 2. Для каждого элемента массива создаём CartItemView
+    this.items.forEach((item, index) => {
+      const cartItemView = new CartItemView(item, this.eventEmitter, index + 1);
+      this.listElement.appendChild(cartItemView.getElement());
+    });
+
+    // 3. Обновляем общую стоимость
+    this.totalPriceElement.textContent = `${this.total.toLocaleString()} синапсов`;
+
+    // 4. Управляем кнопкой «Оформить»: если 0 товаров, disabled = true
+    this.checkoutButton.disabled = (this.items.length === 0);
   }
 
   /**
-   * Обновляет общую стоимость товаров.
-   * @param total - общая стоимость.
+   * Возвращает корневой элемент корзины (<div class="basket">),
+   * который можно вставить в модалку через setContent(...).
    */
-  private updateTotalPrice(total: number): void {
-    this.totalPriceElement.textContent = `${total.toLocaleString()} синапсов`;
-  }
-
-  /**
-   * Управляет состоянием кнопки «Оформить».
-   * @param isEnabled - активна ли кнопка.
-   */
-  private updateCheckoutButtonState(isEnabled: boolean): void {
-    this.checkoutButton.disabled = !isEnabled;
-  }
-
   public getElement(): HTMLElement {
     return this.element;
   }

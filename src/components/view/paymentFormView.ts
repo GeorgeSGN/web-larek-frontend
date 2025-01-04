@@ -1,13 +1,15 @@
-import { IPaymentFormView } from '../../types';
 import { EventEmitter } from '../base/events';
 
-export class PaymentFormView implements IPaymentFormView {
+export class PaymentFormView {
   container: HTMLElement;
   paymentMethod: string | null;
   deliveryAddress: HTMLInputElement | null;
   private eventEmitter: EventEmitter;
   private nextButton: HTMLButtonElement | null;
   private paymentButtons: NodeListOf<HTMLButtonElement>;
+
+  // Один колбэк для submit
+  private onSubmitCallback: (() => void) | null = null;
 
   constructor(eventEmitter: EventEmitter) {
     this.container = document.createElement('div');
@@ -21,6 +23,7 @@ export class PaymentFormView implements IPaymentFormView {
     const clone = template.content.cloneNode(true) as HTMLElement;
     this.container.appendChild(clone);
 
+    this.paymentMethod = null;
     this.deliveryAddress = this.container.querySelector('.form__input') as HTMLInputElement;
     // Инициализируем элементы
     this.nextButton = this.container.querySelector('.order__button') as HTMLButtonElement;
@@ -30,6 +33,32 @@ export class PaymentFormView implements IPaymentFormView {
 
     // Настраиваем событие для ввода адреса доставки
     this.deliveryAddress?.addEventListener('input', () => this.updateNextButtonState());
+
+    // Вешаем submit на <form> (один раз)
+    const form = this.container.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        // Если есть колбэк и форма валидна — вызываем
+        if (this.paymentMethod && this.deliveryAddress?.value.trim() && this.onSubmitCallback) {
+          this.onSubmitCallback();
+        }
+      });
+    }
+
+    // Изначально проверим состояние
+    this.updateNextButtonState();
+  }
+
+  /**
+   * Указываем, что делать при нажатии "Далее" (submit формы).
+   */
+  public setOnSubmit(onNext: () => void): void {
+    this.onSubmitCallback = onNext;
+  }
+
+  public show(): void {
+    this.updateNextButtonState();
   }
 
   /**
@@ -54,7 +83,7 @@ export class PaymentFormView implements IPaymentFormView {
   /**
    * Активируем/блокируем кнопку "Далее" в зависимости от выбранного метода и адреса.
    */
-  updateNextButtonState(): void {
+  private updateNextButtonState(): void {
     if (!this.nextButton || !this.deliveryAddress) return;
   
     const errors = [];
@@ -79,23 +108,11 @@ export class PaymentFormView implements IPaymentFormView {
   }
   
 
-  getData(): { paymentMethod: string; deliveryAddress: string } {
+  public getData(): { paymentMethod: string; deliveryAddress: string } {
     return {
       paymentMethod: this.paymentMethod || '',
       deliveryAddress: this.deliveryAddress?.value || '',
     };
-  }
-
-  bindEvents(onNext: () => void): void {
-    const form = this.container.querySelector('form');
-    if (!form) return;
-
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      if (this.paymentMethod && this.deliveryAddress?.value.trim()) {
-        onNext();
-      }
-    });
   }
 
   render(): HTMLElement {

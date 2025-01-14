@@ -16,7 +16,7 @@ import { PaymentFormView } from './components/view/paymentFormView';
 import { ContactFormView } from './components/view/contactFormView';
 import { OrderSuccessView } from './components/view/orderSuccessView';
 
-// Создаем экземпляр API, eventEmitt
+// Создаем экземпляр API
 const api = new Api(API_URL);
 const eventEmitter = new EventEmitter();
 
